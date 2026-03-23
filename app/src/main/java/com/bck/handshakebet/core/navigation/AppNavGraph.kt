@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.bck.handshakebet.feature.auth.ui.LoginScreen
 
 /**
  * Top-level navigation graph for the HandshakeBet app.
@@ -36,8 +37,13 @@ fun AppNavGraph(
 
         // ── Phase 1: Auth ─────────────────────────────────────────────────────
         composable<Screen.Login> {
-            // TODO(Phase 1): Replace with LoginScreen
-            Text(text = "Login — Phase 1")
+            LoginScreen(
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Login) { inclusive = true }
+                    }
+                }
+            )
         }
 
         // ── Phase 2: Home ─────────────────────────────────────────────────────

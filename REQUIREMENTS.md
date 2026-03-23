@@ -11,6 +11,7 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 - [ ] KDoc on all public classes, functions, and properties
 - [ ] `REQUIREMENTS.md` updated with completed items
 - [ ] `ARCHITECTURE.md` updated if new patterns were introduced
+- [ ] Notion tickets created in Product Backlog for the next phase
 
 ---
 
@@ -36,26 +37,28 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 > Login and sign-up. Everything else requires a signed-in user.
 
 ### Data Layer
-- [ ] `SupabaseUser` DTO
-- [ ] `AuthRemoteSource` — sign in, sign up, sign out, session check
-- [ ] `AuthRepositoryImpl`
+- [x] `AuthRemoteSource` — sign in, sign up, sign out, session check
+- [x] `AuthRepositoryImpl` — maps `UserInfo` to `User`, translates errors to user-friendly messages
+- [x] `AuthModule` — Hilt `@Binds` wiring `AuthRepositoryImpl` → `AuthRepository`
 
 ### Domain Layer
-- [ ] `User` domain model
-- [ ] `AuthRepository` interface
+- [x] `User` domain model (in `core/domain/model/` — shared across features)
+- [x] `SignUpOutcome` — sealed interface distinguishing immediate success from email verification
+- [x] `AuthRepository` interface
 
 ### UI Layer
-- [ ] `AuthUiState` — Loading, Idle, Success, Error states
-- [ ] `AuthViewModel` — login, signup, validation logic
-- [ ] `LoginScreen` — login and sign-up in one screen with mode toggle
-- [ ] Login form components: `EmailField`, `PasswordField`, `ActionButton`, `ErrorMessage`
+- [x] `AuthUiState` — `Idle`, `Loading`, `Success`, `EmailVerificationSent`, `Error`
+- [x] `AuthViewModel` — login, signup, client-side validation, `@HiltViewModel`
+- [x] `LoginScreen` — stateless composable observing `StateFlow`, no business logic
+- [x] Components: `EmailField`, `PasswordField`, `DisplayNameField`, `ActionButton`, `ErrorMessage`, `ToggleModeButton`
 
 ### Tests
-- [ ] `AuthViewModelTest` — login success, login failure, signup success, signup failure, input validation
+- [x] `AuthViewModelTest` — 13 tests covering login success/failure, signup success/verification/failure, validation, state reset
 
 ### Documentation
-- [ ] KDoc on all public classes
-- [ ] `REQUIREMENTS.md` updated
+- [x] KDoc on all public classes, functions, and properties
+- [x] `REQUIREMENTS.md` updated
+- [x] Notion tickets created for Phase 2
 
 ---
 
