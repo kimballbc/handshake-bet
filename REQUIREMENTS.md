@@ -67,27 +67,35 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 > Main screen showing public bets and friend activity.
 
 ### Data Layer
-- [ ] `SupabaseBet` DTO
-- [ ] `BetRemoteSource` — fetch public bets, fetch friend bets
-- [ ] `BetRepositoryImpl` (read methods only)
+- [x] `SupabaseBet` DTO
+- [x] `BetRemoteSource` — fetch public bets, fetch my bets
+- [x] `BetRepositoryImpl` (read methods only)
+- [x] `BetModule` — Hilt `@Binds` wiring `BetRepositoryImpl` → `BetRepository`
 
 ### Domain Layer
-- [ ] `Bet` domain model
-- [ ] `BetRepository` interface (read methods)
+- [x] `Bet` domain model (in `feature/home/domain/model/`)
+- [x] `BetStatus` enum with `fromString()` helper
+- [x] `BetRepository` interface (read methods)
 
 ### UI Layer
-- [ ] `HomeUiState` — tabs (Public / Friends), loading, empty, error states
-- [ ] `HomeViewModel` — tab management, refresh logic
-- [ ] `HomeScreen` — tabbed layout
-- [ ] `PublicBetCard`, `FriendBetCard` components
-- [ ] Bottom navigation bar (`BottomNavBar`)
+- [x] `HomeUiState` — tabs (Public / My Bets), loading, empty, error, refreshing states
+- [x] `HomeTab` enum (Public, My Bets)
+- [x] `HomeViewModel` — tab management, pull-to-refresh, retry, parallel fetch on init
+- [x] `HomeScreen` — tabbed layout with `PullToRefreshBox`, loading/empty/error states
+- [x] `PublicBetCard`, `FriendBetCard` components with `@Preview`
+- [x] `BottomNavBar` in `core/ui/components/` — centred FAB layout: [Home] [Feed] [+ FAB] [Records] [Profile]
+  - Icons: Home (Home), DynamicFeed (Feed), Add (FAB), Leaderboard (Records), AccountCircle (Profile)
+  - Home tab (`Screen.Account`) surfaces pending user actions (bets to accept/reject, notifications)
+  - FAB overlaid on `NavigationBar` via `Box` + `offset(y = -24.dp)`; centre gap via `Spacer(Modifier.weight(1f))`
+- [x] `AppNavGraph` updated — `HomeScreen` wired, `BottomNavBar` integrated with state-restoration, `Scaffold` `innerPadding` applied to `NavHost` to prevent content clipping behind bottom bar
 
 ### Tests
-- [ ] `HomeViewModelTest` — tab switching, refresh, empty state, error state
+- [x] `HomeViewModelTest` — 11 tests: initial load, tab switching, empty state, error state, refresh, retry
 
 ### Documentation
-- [ ] KDoc on all public classes
-- [ ] `REQUIREMENTS.md` updated
+- [x] KDoc on all public classes, functions, and properties
+- [x] `REQUIREMENTS.md` updated
+- [x] Notion tickets created for Phase 3
 
 ---
 
