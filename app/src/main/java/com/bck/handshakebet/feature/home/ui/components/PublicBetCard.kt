@@ -83,6 +83,13 @@ fun PublicBetCard(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "🤝 ${bet.prideWagered} pride",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
         }
     }
 }

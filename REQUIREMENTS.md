@@ -104,31 +104,73 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 > Creating new bets and managing active ones (accept, reject, complete).
 
 ### Data Layer
-- [ ] `BetRemoteSource` extended — create, accept, reject, complete
-- [ ] `UserRemoteSource` — fetch users for bet participant selection
-- [ ] `BetRepositoryImpl` updated
+- [x] `BetRemoteSource` extended — create, accept, reject, complete, cancel; `BetInsert` inner DTO
+- [x] `SupabaseUser` DTO + `UserRemoteSource` — search users by display name, exclude self
+- [x] `BetRepositoryImpl` updated — mutation methods; reads current user display name from Auth metadata
+- [x] `UserRepositoryImpl` + `UserModule` — Hilt binding for `UserRepository`
 
 ### Domain Layer
-- [ ] `BetRepository` interface updated with mutation methods
-- [ ] `UserRepository` interface
+- [x] `BetRepository` interface updated with createBet, acceptBet, rejectBet, cancelBet, completeBet
+- [x] `UserSummary` domain model — lightweight model for opponent selection
+- [x] `UserRepository` interface — searchUsers (TODO Phase 5: scope to friends list), getCurrentUserSummary
 
 ### UI Layer
-- [ ] `NewBetUiState`, `NewBetViewModel` — participant selection, form validation
-- [ ] `NewBetScreen`, `HandshakeSlider` component
-- [ ] `AccountUiState`, `AccountViewModel` — active bets, bet actions
-- [ ] `AccountScreen`, `BetCard`, `OutcomeDialog` components
+- [x] `HandshakeSlider` in `core/ui/components/` — branded swipe-to-confirm; Gavel icon; spring-back on early release
+- [x] `NewBetUiState`, `NewBetViewModel` — debounced opponent search (400 ms, 2-char minimum), form validation, `canSubmit` guard
+- [x] `NewBetScreen` — title, description, public/private toggle, opponent search with result list, `HandshakeSlider` to submit
+- [x] `AccountUiState`, `AccountViewModel` — bets bucketed into 4 sections (action needed, awaiting, active, history); action loading flag; error recovery
+- [x] `AccountScreen` — sectioned `LazyColumn` with pull-to-refresh, empty state, Snackbar for action errors
+- [x] `BetActionCard` — context-sensitive actions per role and status; `OutcomeDialog` for winner selection
+- [x] `AppNavGraph` updated — `AccountScreen` and `NewBetScreen` wired; on bet created navigates to Account
 
 ### Tests
-- [ ] `NewBetViewModelTest` — form validation, participant search, submission
-- [ ] `AccountViewModelTest` — bet loading, accept/reject/complete flows
+- [x] `NewBetViewModelTest` — 12 tests: initial state, field updates, canSubmit validation, opponent selection, debounced search, createBet success/failure/no-op, error dismissal
+- [x] `AccountViewModelTest` — 9 tests: initial load, section bucketing, error state, empty state, accept/reject/cancel/complete flows, action error surfacing and dismissal
 
 ### Documentation
-- [ ] KDoc on all public classes
+- [x] KDoc on all public classes, functions, and properties
+- [x] `REQUIREMENTS.md` updated
+
+### Supabase (handshake-dev)
+- No new migrations needed — INSERT + UPDATE RLS policies and `public.users` SELECT policy were already in place
+- Migration `phase3_bet_pride_wagered_default`: added `DEFAULT 1` to `bets.pride_wagered` so Phase 3 inserts don't require this future-feature field
+
+---
+
+## Phase 4 — Compose UI Tests
+
+> Introduce instrumented Compose UI tests across the screens built so far (Login, Home Feed, Account). Establishes the test infrastructure, conventions, and tooling so every subsequent phase ships with UI test coverage from the start.
+
+### Infrastructure
+- [ ] Add `androidx.compose.ui:ui-test-junit4`, `androidx.compose.ui:ui-test-manifest` to `app/build.gradle.kts`
+- [ ] `HiltTestRunner` configured in `testInstrumentationRunner`
+- [ ] Base `ComposeTestRule` helper / shared test utilities in `core/testing/`
+
+### Login Screen
+- [ ] Email field renders and accepts input
+- [ ] Password field renders and accepts input
+- [ ] Error message shown when login fails
+- [ ] Toggle between Login / Sign Up modes
+
+### Home Feed Screen
+- [ ] Public tab displays bet cards
+- [ ] My Bets tab displays friend bet cards
+- [ ] Pull-to-refresh triggers reload
+- [ ] Empty state renders correctly
+- [ ] Error state with retry button renders correctly
+
+### Account / Home Screen (Phase 3 prerequisite — add after Phase 3)
+- [ ] Pending bets list renders
+- [ ] Accept / Reject actions visible on pending cards
+- [ ] Completed bets section renders
+
+### Documentation
+- [ ] `ARCHITECTURE.md` updated with Compose UI test conventions
 - [ ] `REQUIREMENTS.md` updated
 
 ---
 
-## Phase 4 — Friends
+## Phase 5 — Friends
 
 > Friend requests, acceptance/rejection, and friends list.
 
@@ -154,7 +196,7 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 
 ---
 
-## Phase 5 — Records & Stats
+## Phase 7 — Records & Stats
 
 > Win/loss/draw records and achievements/accolades.
 
@@ -201,7 +243,7 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 
 ---
 
-## Phase 6 — Profile & Settings
+## Phase 8 — Profile & Settings
 
 > Avatar selection, display name management, sign out.
 

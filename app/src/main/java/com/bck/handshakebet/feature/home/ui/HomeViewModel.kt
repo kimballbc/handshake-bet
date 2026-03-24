@@ -2,6 +2,7 @@ package com.bck.handshakebet.feature.home.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bck.handshakebet.feature.home.domain.model.Bet
 import com.bck.handshakebet.feature.home.domain.repository.BetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -32,6 +33,18 @@ class HomeViewModel @Inject constructor(
     /** Observable state for the Home screen. */
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    /**
+     * Last successfully loaded public bets. Preserved so that switching away
+     * from [HomeUiState.Empty] and back to the PUBLIC tab can still render data.
+     */
+    private var lastPublicBets: List<Bet> = emptyList()
+
+    /**
+     * Last successfully loaded personal bets. Preserved so that switching away
+     * from [HomeUiState.Empty] and back to the MY_BETS tab can still render data.
+     */
+    private var lastMyBets: List<Bet> = emptyList()
+
     init {
         loadBets()
     }
@@ -42,10 +55,24 @@ class HomeViewModel @Inject constructor(
      * Switches the active tab and re-evaluates whether to show the empty state
      * for the newly selected tab.
      *
+     * Handles the case where the current state is [HomeUiState.Empty] by
+     * reconstructing a [HomeUiState.Success] from the last known bet lists,
+     * preventing the tab bar from becoming permanently unresponsive.
+     *
      * @param tab The tab to make active.
      */
     fun onTabSelected(tab: HomeTab) {
-        val current = _uiState.value as? HomeUiState.Success ?: return
+        // Reconstruct Success from backing fields when in Empty state so tab
+        // switches work even when the active tab has no content.
+        val current = when (val s = _uiState.value) {
+            is HomeUiState.Success -> s
+            is HomeUiState.Empty   -> HomeUiState.Success(
+                publicBets  = lastPublicBets,
+                myBets      = lastMyBets,
+                selectedTab = s.selectedTab
+            )
+            else -> return
+        }
         val newState = current.copy(selectedTab = tab)
         _uiState.value = if (newState.isActiveTabEmpty()) {
             HomeUiState.Empty(tab)
@@ -105,6 +132,11 @@ class HomeViewModel @Inject constructor(
 
             val publicBets = publicResult.getOrElse { emptyList() }
             val myBets = myResult.getOrElse { emptyList() }
+
+            // Preserve for tab switching out of Empty state.
+            lastPublicBets = publicBets
+            lastMyBets = myBets
+
             val selectedTab = if (isRefresh) previousTab else HomeTab.PUBLIC
 
             val success = HomeUiState.Success(

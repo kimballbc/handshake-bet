@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:central.sonatype.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:repo1.maven.org)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__get_advisors"
+    ]
+  }
+}

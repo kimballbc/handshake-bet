@@ -10,6 +10,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import android.util.Log
 import javax.inject.Inject
 
+private const val TAG = "BCK"
+
 /**
  * Supabase-backed implementation of [AuthRepository].
  *
@@ -26,10 +28,13 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     override suspend fun signIn(email: String, password: String): Result<User> {
+        Log.d(TAG, "AuthRepositoryImpl.signIn → email=$email")
         return try {
             val userInfo = remoteSource.signIn(email, password)
+            Log.d(TAG, "AuthRepositoryImpl.signIn ← success, userId=${userInfo.id}")
             Result.success(userInfo.toDomainUser())
         } catch (e: Exception) {
+            Log.e(TAG, "AuthRepositoryImpl.signIn ✗ ${e::class.simpleName}: ${e.message}", e)
             Result.failure(Exception(toFriendlyMessage(e)))
         }
     }
@@ -39,24 +44,31 @@ class AuthRepositoryImpl @Inject constructor(
         password: String,
         displayName: String
     ): Result<SignUpOutcome> {
+        Log.d(TAG, "AuthRepositoryImpl.signUp → email=$email, displayName=$displayName")
         return try {
             val userInfo = remoteSource.signUp(email, password, displayName)
             val outcome = if (userInfo != null) {
+                Log.d(TAG, "AuthRepositoryImpl.signUp ← success, userId=${userInfo.id}")
                 SignUpOutcome.Success(userInfo.toDomainUser())
             } else {
+                Log.d(TAG, "AuthRepositoryImpl.signUp ← email verification required")
                 SignUpOutcome.EmailVerificationRequired
             }
             Result.success(outcome)
         } catch (e: Exception) {
+            Log.e(TAG, "AuthRepositoryImpl.signUp ✗ ${e::class.simpleName}: ${e.message}", e)
             Result.failure(Exception(toFriendlyMessage(e)))
         }
     }
 
     override suspend fun signOut(): Result<Unit> {
+        Log.d(TAG, "AuthRepositoryImpl.signOut →")
         return try {
             remoteSource.signOut()
+            Log.d(TAG, "AuthRepositoryImpl.signOut ← success")
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e(TAG, "AuthRepositoryImpl.signOut ✗ ${e::class.simpleName}: ${e.message}", e)
             Result.failure(Exception(toFriendlyMessage(e)))
         }
     }
@@ -98,7 +110,7 @@ class AuthRepositoryImpl @Inject constructor(
      * server's JSON message embedded in the string.
      */
     private fun toFriendlyMessage(e: Throwable): String {
-        Log.e("AUTH", "Auth error: ${e.message}", e)
+        Log.e(TAG, "AuthRepositoryImpl.toFriendlyMessage: ${e.message}", e)
         return when {
         e.message?.contains("already registered", ignoreCase = true) == true ||
         e.message?.contains("already exists", ignoreCase = true) == true ->

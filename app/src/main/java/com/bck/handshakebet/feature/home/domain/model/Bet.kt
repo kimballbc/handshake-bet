@@ -17,6 +17,7 @@ package com.bck.handshakebet.feature.home.domain.model
  * @property status                Current lifecycle state of the bet.
  * @property isPublic              Whether the bet appears in the public feed.
  * @property winnerId              User ID of the winner, or `null` if not yet determined.
+ * @property prideWagered          Amount of pride on the line (1–100).
  * @property createdAt             ISO-8601 timestamp of creation.
  */
 data class Bet(
@@ -30,5 +31,6 @@ data class Bet(
     val status: BetStatus,
     val isPublic: Boolean,
     val winnerId: String?,
-    val createdAt: String
+    val createdAt: String,
+    val prideWagered: Int = 1
 )

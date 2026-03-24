@@ -20,6 +20,7 @@ import kotlinx.serialization.Serializable
  * @property opponentDisplayName Denormalised display name of the opponent, or `null`.
  * @property status              Raw status string (e.g. "pending", "active").
  * @property isPublic            Whether the bet is visible in the public feed.
+ * @property prideWagered        Amount of pride wagered on this bet.
  * @property winnerId            UUID of the winner, or `null` if undecided.
  * @property createdAt           ISO-8601 creation timestamp.
  */
@@ -34,6 +35,7 @@ data class SupabaseBet(
     @SerialName("opponent_display_name") val opponentDisplayName: String? = null,
     @SerialName("status")                val status: String = "pending",
     @SerialName("is_public")             val isPublic: Boolean = false,
+    @SerialName("pride_wagered")         val prideWagered: Int = 1,
     @SerialName("winner_id")             val winnerId: String? = null,
     @SerialName("created_at")            val createdAt: String = ""
 )

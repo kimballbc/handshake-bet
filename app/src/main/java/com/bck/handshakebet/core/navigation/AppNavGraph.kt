@@ -14,8 +14,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.bck.handshakebet.core.ui.components.BottomNavBar
+import com.bck.handshakebet.feature.account.ui.AccountScreen
 import com.bck.handshakebet.feature.auth.ui.LoginScreen
 import com.bck.handshakebet.feature.home.ui.HomeScreen
+import com.bck.handshakebet.feature.newbet.ui.NewBetScreen
 
 /**
  * Top-level navigation graph for the HandshakeBet app.
@@ -107,22 +109,32 @@ fun AppNavGraph(
 
             // ── Phase 3: Bets ─────────────────────────────────────────────────────
             composable<Screen.NewBet> {
-                // TODO(Phase 3): Replace with NewBetScreen
-                Text(text = "New Bet — Phase 3")
+                NewBetScreen(
+                    onBetCreated = {
+                        // Pop all the way back to Screen.Home (keeping it) so the
+                        // back stack is always a clean [Home → Account]. Using
+                        // popUpTo(NewBet) only removed NewBet but left stale Account
+                        // copies that broke bottom-nav tab switching afterwards.
+                        navController.navigate(Screen.Account) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateUp = { navController.popBackStack() }
+                )
             }
 
             composable<Screen.Account> {
-                // TODO(Phase 3): Replace with AccountScreen
-                Text(text = "Account — Phase 3")
+                AccountScreen()
             }
 
             composable<Screen.BetDetail> { backStackEntry ->
                 val destination: Screen.BetDetail = backStackEntry.toRoute()
-                // TODO(Phase 3): Replace with BetDetailScreen(betId = destination.betId)
-                Text(text = "Bet Detail: ${destination.betId} — Phase 3")
+                // TODO(Phase 3+): Replace with BetDetailScreen(betId = destination.betId)
+                Text(text = "Bet Detail: ${destination.betId}")
             }
 
-            // ── Phase 4: Friends ──────────────────────────────────────────────────
+            // ── Phase 5: Friends ──────────────────────────────────────────────────
             // Friends surface is embedded within Home and Account screens;
             // no top-level destination needed.
 
