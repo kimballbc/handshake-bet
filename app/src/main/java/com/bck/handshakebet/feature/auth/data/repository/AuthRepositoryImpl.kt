@@ -7,6 +7,7 @@ import com.bck.handshakebet.feature.auth.domain.repository.AuthRepository
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import android.util.Log
 import javax.inject.Inject
 
 /**
@@ -96,7 +97,9 @@ class AuthRepositoryImpl @Inject constructor(
      * Supabase Kotlin SDK wraps HTTP errors as plain exceptions with the
      * server's JSON message embedded in the string.
      */
-    private fun toFriendlyMessage(e: Throwable): String = when {
+    private fun toFriendlyMessage(e: Throwable): String {
+        Log.e("AUTH", "Auth error: ${e.message}", e)
+        return when {
         e.message?.contains("already registered", ignoreCase = true) == true ||
         e.message?.contains("already exists", ignoreCase = true) == true ->
             "This email is already registered"
@@ -115,5 +118,6 @@ class AuthRepositoryImpl @Inject constructor(
             "Check your internet connection and try again"
 
         else -> "Something went wrong. Please try again"
+        }
     }
 }

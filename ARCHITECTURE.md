@@ -172,7 +172,26 @@ Every test class containing a ViewModel includes this rule:
 val mainDispatcherRule = MainDispatcherRule()
 ```
 
-This replaces `Dispatchers.Main` with an `UnconfinedTestDispatcher` for the duration of the test. See `core/testing/MainDispatcherRule.kt`.
+This replaces `Dispatchers.Main` with a `TestDispatcher` for the duration of the test. See `core/testing/MainDispatcherRule.kt`.
+
+The choice of dispatcher matters:
+
+| Dispatcher | Default? | Use when |
+|---|---|---|
+| `StandardTestDispatcher` | Yes | You need to observe intermediate states (e.g. `Loading` → `Success`). Coroutines suspend until you call `advanceUntilIdle()`. |
+| `UnconfinedTestDispatcher` | No — pass explicitly | The ViewModel launches work in `init {}` and tests rely on that work completing before the test body runs. Coroutines execute eagerly. |
+
+**Example — eager init (HomeViewModelTest):**
+```kotlin
+@get:Rule
+val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
+```
+
+**Example — observable Loading state (AuthViewModelTest):**
+```kotlin
+@get:Rule
+val mainDispatcherRule = MainDispatcherRule()   // StandardTestDispatcher
+```
 
 ---
 
@@ -216,3 +235,5 @@ Debug builds use `DEV` credentials; release builds use `PROD` credentials. Value
 | 2026-03 | Feature-based packages over type-based | Co-locates related code; easier to find, delete, or extract a feature |
 | 2026-03 | Type-safe Navigation 2.8+ | Compile-time route verification; eliminates string-based route bugs from v1 |
 | 2026-03 | `Result<T>` return type for repositories | Explicit, consistent error handling without checked exceptions |
+| 2026-03 | Centred FAB nav bar — [My Bets][Feed][+][Records][Profile] | Intentional left-to-right user journey (mine → discover → create → history → me). FAB prominence encourages the core action. Stats demoted to a tab within Records (Phase 5) rather than a top-level nav item to keep the bar uncluttered. |
+| 2026-03 | `Scaffold` `innerPadding` passed to `NavHost` modifier | Ensures `LazyColumn` content scrolls fully above the `BottomNavBar` without the last card being clipped. The padding is zero when the bottom bar is hidden (e.g. Login screen). |
