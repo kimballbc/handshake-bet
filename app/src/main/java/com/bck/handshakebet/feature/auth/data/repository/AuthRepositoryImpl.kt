@@ -5,6 +5,7 @@ import com.bck.handshakebet.feature.auth.data.remote.AuthRemoteSource
 import com.bck.handshakebet.feature.auth.domain.model.SignUpOutcome
 import com.bck.handshakebet.feature.auth.domain.repository.AuthRepository
 import io.github.jan.supabase.auth.user.UserInfo
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import javax.inject.Inject
 

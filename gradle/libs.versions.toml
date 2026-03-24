@@ -13,8 +13,8 @@ composeBom = "2024.09.00"
 hilt = "2.51.1"
 hiltNavigationCompose = "1.2.0"
 navigationCompose = "2.8.4"
-supabaseBom = "2.5.4"
-ktor = "2.3.12"
+supabaseBom = "3.4.1"
+ktor = "3.0.3"
 coil = "2.7.0"
 kotlinxSerializationJson = "1.7.3"
 mockk = "1.13.12"
@@ -49,9 +49,9 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 
 # Supabase
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabaseBom" }
-supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
-supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
-supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-kt" }
+supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt", version.ref = "supabaseBom" }
+supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt", version.ref = "supabaseBom" }
+supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-kt", version.ref = "supabaseBom" }
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
 
 # Image Loading

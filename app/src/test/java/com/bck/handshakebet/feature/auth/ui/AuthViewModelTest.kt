@@ -7,6 +7,7 @@ import com.bck.handshakebet.feature.auth.domain.model.SignUpOutcome
 import com.bck.handshakebet.feature.auth.domain.repository.AuthRepository
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -19,8 +20,11 @@ import org.junit.Test
  *
  * The [AuthRepository] is mocked with MockK so no Supabase or Android
  * dependencies are involved. [MainDispatcherRule] replaces [kotlinx.coroutines.Dispatchers.Main]
- * with an [kotlinx.coroutines.test.UnconfinedTestDispatcher] for the duration
- * of each test. State transitions are asserted using Turbine's `test {}` block.
+ * with a [kotlinx.coroutines.test.StandardTestDispatcher] for the duration of each
+ * test, and every [runTest] call shares that same dispatcher so all coroutines run
+ * on one scheduler. Mocks that sit behind a Loading state use `coAnswers { delay(1); … }`
+ * to create a real suspension point that lets Turbine observe the intermediate state
+ * before [kotlinx.coroutines.flow.StateFlow] conflates it with the final value.
  */
 class AuthViewModelTest {
 
@@ -44,8 +48,8 @@ class AuthViewModelTest {
     // ── onLoginClicked ────────────────────────────────────────────────────────
 
     @Test
-    fun `login with valid credentials emits Loading then Success`() = runTest {
-        coEvery { authRepository.signIn(any(), any()) } returns Result.success(testUser)
+    fun `login with valid credentials emits Loading then Success`() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { authRepository.signIn(any(), any()) } coAnswers { delay(1); Result.success(testUser) }
 
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
@@ -60,9 +64,10 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `login with invalid credentials emits Loading then Error`() = runTest {
-        coEvery { authRepository.signIn(any(), any()) } returns
-            Result.failure(Exception("Incorrect email or password"))
+    fun `login with invalid credentials emits Loading then Error`() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { authRepository.signIn(any(), any()) } coAnswers {
+            delay(1); Result.failure(Exception("Incorrect email or password"))
+        }
 
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
@@ -77,7 +82,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `login with blank email emits Error without Loading`() = runTest {
+    fun `login with blank email emits Error without Loading`() = runTest(mainDispatcherRule.testDispatcher) {
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
 
@@ -91,7 +96,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `login with blank password emits Error without Loading`() = runTest {
+    fun `login with blank password emits Error without Loading`() = runTest(mainDispatcherRule.testDispatcher) {
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
 
@@ -107,9 +112,10 @@ class AuthViewModelTest {
     // ── onSignUpClicked ───────────────────────────────────────────────────────
 
     @Test
-    fun `signup with valid inputs emits Loading then Success`() = runTest {
-        coEvery { authRepository.signUp(any(), any(), any()) } returns
-            Result.success(SignUpOutcome.Success(testUser))
+    fun `signup with valid inputs emits Loading then Success`() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { authRepository.signUp(any(), any(), any()) } coAnswers {
+            delay(1); Result.success(SignUpOutcome.Success(testUser))
+        }
 
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
@@ -124,9 +130,10 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `signup when email verification required emits Loading then EmailVerificationSent`() = runTest {
-        coEvery { authRepository.signUp(any(), any(), any()) } returns
-            Result.success(SignUpOutcome.EmailVerificationRequired)
+    fun `signup when email verification required emits Loading then EmailVerificationSent`() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { authRepository.signUp(any(), any(), any()) } coAnswers {
+            delay(1); Result.success(SignUpOutcome.EmailVerificationRequired)
+        }
 
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
@@ -139,9 +146,10 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `signup failure emits Loading then Error`() = runTest {
-        coEvery { authRepository.signUp(any(), any(), any()) } returns
-            Result.failure(Exception("This email is already registered"))
+    fun `signup failure emits Loading then Error`() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { authRepository.signUp(any(), any(), any()) } coAnswers {
+            delay(1); Result.failure(Exception("This email is already registered"))
+        }
 
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
@@ -156,7 +164,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `signup with blank display name emits Error without Loading`() = runTest {
+    fun `signup with blank display name emits Error without Loading`() = runTest(mainDispatcherRule.testDispatcher) {
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
 
@@ -170,7 +178,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `signup with password too short emits Error without Loading`() = runTest {
+    fun `signup with password too short emits Error without Loading`() = runTest(mainDispatcherRule.testDispatcher) {
         viewModel.uiState.test {
             assertEquals(AuthUiState.Idle, awaitItem())
 
@@ -221,9 +229,10 @@ class AuthViewModelTest {
     // ── onStateConsumed ───────────────────────────────────────────────────────
 
     @Test
-    fun `onStateConsumed resets state to Idle`() = runTest {
-        coEvery { authRepository.signIn(any(), any()) } returns
-            Result.failure(Exception("error"))
+    fun `onStateConsumed resets state to Idle`() = runTest(mainDispatcherRule.testDispatcher) {
+        coEvery { authRepository.signIn(any(), any()) } coAnswers {
+            delay(1); Result.failure(Exception("error"))
+        }
 
         viewModel.uiState.test {
             awaitItem() // Idle

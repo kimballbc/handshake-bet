@@ -58,6 +58,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        // Supabase BOM 3.x and Ktor 3.x are compiled with newer Kotlin metadata.
+        // This flag lets our Kotlin 2.0.21 compiler accept those libraries without
+        // a hard failure. Remove when the project upgrades to Kotlin 2.3.x+.
+        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
     }
     buildFeatures {
         compose = true

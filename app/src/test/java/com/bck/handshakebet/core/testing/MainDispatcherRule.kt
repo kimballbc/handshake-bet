@@ -2,8 +2,8 @@ package com.bck.handshakebet.core.testing
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.rules.TestWatcher
@@ -35,14 +35,15 @@ import org.junit.runner.Description
  * ```
  *
  * @param testDispatcher The [TestDispatcher] to install as the main dispatcher.
- *   Defaults to [UnconfinedTestDispatcher], which executes coroutines eagerly
- *   without suspension — ideal for most ViewModel unit tests. Switch to
- *   [kotlinx.coroutines.test.StandardTestDispatcher] when you need precise
- *   control over coroutine execution order.
+ *   Defaults to [StandardTestDispatcher], which queues coroutines rather than
+ *   running them eagerly. This lets Turbine observe intermediate states (e.g.
+ *   Loading) before the final state is set. Pass the same dispatcher to
+ *   [kotlinx.coroutines.test.runTest] so all coroutines share one scheduler:
+ *   `runTest(mainDispatcherRule.testDispatcher) { … }`
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(
-    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+    val testDispatcher: TestDispatcher = StandardTestDispatcher()
 ) : TestWatcher() {
 
     override fun starting(description: Description) {
