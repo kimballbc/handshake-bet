@@ -2,13 +2,17 @@ package com.bck.handshakebet.feature.auth.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,10 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bck.handshakebet.BuildConfig
 import com.bck.handshakebet.feature.auth.ui.components.ActionButton
 import com.bck.handshakebet.feature.auth.ui.components.DisplayNameField
 import com.bck.handshakebet.feature.auth.ui.components.EmailField
@@ -167,6 +173,74 @@ fun LoginScreen(
             // Error and info messages
             ErrorMessage(message = errorMessage, isError = true)
             ErrorMessage(message = infoMessage, isError = false)
+
+            // ── Dev-only quick account switcher ───────────────────────────
+            if (BuildConfig.DEBUG) {
+                Spacer(modifier = Modifier.height(24.dp))
+                DevQuickLogin(
+                    onAccountSelected = { devEmail, devPassword ->
+                        email = devEmail
+                        password = devPassword
+                        isSignUpMode = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// ── Dev-only quick account switcher ──────────────────────────────────────────
+
+/**
+ * Shown only in DEBUG builds. Renders a row of labelled buttons — one per
+ * test account — that fill the email and password fields instantly, saving
+ * the need to type credentials while switching between test users.
+ *
+ * Hardcoded credentials are intentional and dev-only; this composable is
+ * unreachable in release builds because it is only called when
+ * [BuildConfig.DEBUG] is `true`.
+ *
+ * @param onAccountSelected Called with (email, password) when a button is tapped.
+ */
+@Composable
+private fun DevQuickLogin(
+    onAccountSelected: (email: String, password: String) -> Unit
+) {
+    val accounts = listOf(
+        Triple("Test",    "test@test.com",          "1234"),
+        Triple("Ben +1",  "kimballbc+1@gmail.com",   "Space1oddity!"),
+        Triple("Ben +2",  "kimballbc+2@gmail.com",   "Space1oddity!")
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "DEV — Quick Login",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            accounts.forEach { (label, email, password) ->
+                OutlinedButton(
+                    onClick = { onAccountSelected(email, password) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
         }
     }
 }
