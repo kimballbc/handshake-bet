@@ -101,6 +101,19 @@ class HomeViewModel @Inject constructor(
      */
     fun onRetry() = loadBets()
 
+    /**
+     * Called when the Home screen re-enters the foreground (e.g. the user navigates
+     * back from [Screen.NewBet] or returns from another tab).
+     *
+     * Performs a silent background refresh so the feed stays up-to-date without
+     * flashing a full-screen spinner. The currently selected tab is preserved.
+     */
+    fun onScreenResumed() {
+        // isRefresh = true keeps the previously selected tab; no spinner is shown
+        // because only onRefresh() sets isRefreshing = true before calling loadBets.
+        loadBets(isRefresh = true)
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
@@ -114,8 +127,11 @@ class HomeViewModel @Inject constructor(
      */
     private fun loadBets(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            val previousTab = (_uiState.value as? HomeUiState.Success)?.selectedTab
-                ?: HomeTab.PUBLIC
+            val previousTab = when (val s = _uiState.value) {
+                is HomeUiState.Success -> s.selectedTab
+                is HomeUiState.Empty   -> s.selectedTab
+                else                   -> HomeTab.PUBLIC
+            }
 
             val publicDeferred = async { betRepository.fetchPublicBets() }
             val myDeferred = async { betRepository.fetchMyBets() }

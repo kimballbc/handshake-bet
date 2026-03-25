@@ -64,10 +64,13 @@ fun AppNavGraph(
                     selectedDestination = selectedScreen,
                     onDestinationSelected = { screen ->
                         navController.navigate(screen) {
-                            // Pop up to Home so back-stack doesn't grow unboundedly.
-                            popUpTo(Screen.Home) { saveState = true }
+                            // Always pop back to Home (keeping it) so the stack
+                            // is a predictable [Home → tab]. Avoiding saveState /
+                            // restoreState keeps the NavController's saved-state
+                            // map in sync with onBetCreated's navigation, which
+                            // was causing Feed to become unreachable after posting.
+                            popUpTo(Screen.Home) { inclusive = false }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     onNewBetClick = {

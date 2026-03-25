@@ -9,6 +9,8 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -146,8 +148,14 @@ class NewBetViewModelTest {
         coEvery { userRepository.searchUsers("Al") } returns Result.success(users)
 
         val vm = viewModel()
+        // With StandardTestDispatcher the collector coroutine is queued, not started.
+        // runCurrent() lets it subscribe to _searchQuery so it receives the initial ""
+        // value that drop(1) is meant to skip — before we push the real query.
+        runCurrent()
+
         vm.onSearchQueryChanged("Al")
         advanceTimeBy(401)
+        runCurrent() // let the search coroutine complete after the debounce fires
 
         assertEquals(users, vm.uiState.value.searchResults)
     }
@@ -168,12 +176,16 @@ class NewBetViewModelTest {
         coEvery { userRepository.searchUsers("Al") } returns Result.success(users)
 
         val vm = viewModel()
+        runCurrent() // start the collector coroutines before pushing a query
+
         vm.onSearchQueryChanged("Al")
         advanceTimeBy(401)
+        runCurrent() // let the search coroutine complete
         assertEquals(users, vm.uiState.value.searchResults)
 
         vm.onSearchQueryChanged("A")
         advanceTimeBy(200)
+        runCurrent() // let the clear coroutine complete
         assertTrue(vm.uiState.value.searchResults.isEmpty())
     }
 
@@ -213,8 +225,8 @@ class NewBetViewModelTest {
         vm.onOpponentSelected(UserSummary("opp-id", "Alex"))
         vm.onWagerAmountChanged("10")
         vm.createBet()
+        advanceUntilIdle() // let the coroutine run to completion
 
-        // Advance until idle so the coroutine completes
         val state = vm.uiState.value
         assertFalse(state.isSuccess)
         assertNotNull(state.errorMessage)
@@ -233,6 +245,7 @@ class NewBetViewModelTest {
         vm.onWagerAmountChanged("10")
         val keyBefore = vm.uiState.value.sliderResetKey
         vm.createBet()
+        advanceUntilIdle() // let the coroutine run to completion
 
         assertEquals(keyBefore + 1, vm.uiState.value.sliderResetKey)
     }
@@ -257,6 +270,7 @@ class NewBetViewModelTest {
         vm.onOpponentSelected(UserSummary("id", "Alex"))
         vm.onWagerAmountChanged("10")
         vm.createBet()
+        advanceUntilIdle() // let the coroutine run to completion
 
         assertNotNull(vm.uiState.value.errorMessage)
         vm.onErrorShown()

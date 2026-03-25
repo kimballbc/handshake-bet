@@ -97,11 +97,17 @@ class AccountViewModelTest {
             awaitItem() // Initial Success (from UnconfinedTestDispatcher)
             vm.acceptBet("b1")
             // isPerformingAction = true
-            val loading = awaitItem() as AccountUiState.Success
-            assertTrue(loading.isPerformingAction)
-            // Reload triggers Loading then new Success
-            awaitItem() // Loading
-            val refreshed = awaitItem() as AccountUiState.Success
+            val performing = awaitItem() as AccountUiState.Success
+            assertTrue(performing.isPerformingAction)
+            // With UnconfinedTestDispatcher the Loading→Success transition in loadBets()
+            // can be conflated by StateFlow before Turbine collects it.
+            // Drain any Loading item and grab the final refreshed Success.
+            val next = awaitItem()
+            val refreshed: AccountUiState.Success = if (next is AccountUiState.Loading) {
+                awaitItem() as AccountUiState.Success
+            } else {
+                next as AccountUiState.Success
+            }
             assertFalse(refreshed.isPerformingAction)
             cancelAndIgnoreRemainingEvents()
         }
@@ -182,9 +188,10 @@ class AccountViewModelTest {
         val vm = viewModel()
         vm.acceptBet("any")
 
-        assertNull((vm.uiState.value as? AccountUiState.Success)?.actionError.also {
-            vm.onActionErrorShown()
-        })
+        // Error should be present before clearing.
+        assertEquals("Oops", (vm.uiState.value as? AccountUiState.Success)?.actionError)
+        vm.onActionErrorShown()
+        // Error should be null after clearing.
         assertNull((vm.uiState.value as? AccountUiState.Success)?.actionError)
     }
 
