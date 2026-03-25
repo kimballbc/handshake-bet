@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -22,9 +24,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +61,20 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Silently refresh both tabs every time this screen comes back into view.
+    // Uses an explicit LifecycleEventObserver so ON_RESUME fires reliably for
+    // both first-launch and returning via back-stack or bottom nav tab switch.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onScreenResumed()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     HomeScreenContent(
         uiState = uiState,
@@ -91,6 +112,12 @@ private fun HomeScreenContent(
         else                   -> HomeTab.PUBLIC
     }
     val isRefreshing = (uiState as? HomeUiState.Success)?.isRefreshing == true
+
+    // Shared list state — scrolled back to top whenever the active tab changes.
+    val listState = rememberLazyListState()
+    LaunchedEffect(selectedTab) {
+        listState.scrollToItem(0)
+    }
 
     Scaffold(
         topBar = {
@@ -139,6 +166,7 @@ private fun HomeScreenContent(
                             HomeTab.MY_BETS -> uiState.myBets
                         },
                         tab = uiState.selectedTab,
+                        listState = listState,
                         onBetClick = onBetClick
                     )
                 }
@@ -196,9 +224,11 @@ private fun EmptyContent(tab: HomeTab) {
 private fun BetList(
     bets: List<Bet>,
     tab: HomeTab,
+    listState: LazyListState,
     onBetClick: (String) -> Unit
 ) {
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize()
