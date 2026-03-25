@@ -7,6 +7,8 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import javax.inject.Inject
 
 private const val TAG = "BCK"
@@ -49,42 +51,47 @@ class FriendshipRemoteSource @Inject constructor(
 
         Log.d(TAG, "FriendshipRemoteSource.fetchAllFriendships → currentUserId=$currentUserId")
 
-        // 1. Fetch all friendship rows for this user.
-        val friendships = postgrest.from("friendships")
-            .select {
-                filter {
-                    or {
-                        filter(FilterOperation("requester_id", FilterOperator.EQ, currentUserId))
-                        filter(FilterOperation("recipient_id", FilterOperator.EQ, currentUserId))
+        return try {
+            // 1. Fetch all friendship rows for this user.
+            val friendships = postgrest.from("friendships")
+                .select {
+                    filter {
+                        or {
+                            filter(FilterOperation("requester_id", FilterOperator.EQ, currentUserId))
+                            filter(FilterOperation("recipient_id", FilterOperator.EQ, currentUserId))
+                        }
+                    }
+                    order("created_at", Order.DESCENDING)
+                }
+                .decodeList<SupabaseFriendship>()
+
+            Log.d(TAG, "FriendshipRemoteSource.fetchAllFriendships ← ${friendships.size} rows")
+
+            if (friendships.isEmpty()) return Pair(emptyList(), emptyMap())
+
+            // 2. Collect all "other party" UUIDs and batch-fetch their display names.
+            val otherIds = friendships
+                .map { if (it.requesterId == currentUserId) it.recipientId else it.requesterId }
+                .distinct()
+
+            Log.d(TAG, "FriendshipRemoteSource.fetchAllFriendships → fetching display names for ${otherIds.size} ids")
+
+            val users = postgrest.from("users")
+                .select {
+                    filter {
+                        isIn("id", otherIds)
                     }
                 }
-                order("created_at", Order.DESCENDING)
-            }
-            .decodeList<SupabaseFriendship>()
+                .decodeList<SupabaseUser>()
 
-        Log.d(TAG, "FriendshipRemoteSource.fetchAllFriendships ← ${friendships.size} rows")
+            val displayNameById = users.associate { it.id to it.displayName }
+            Log.d(TAG, "FriendshipRemoteSource.fetchAllFriendships ← ${users.size} display names loaded")
 
-        if (friendships.isEmpty()) return Pair(emptyList(), emptyMap())
-
-        // 2. Collect all "other party" UUIDs and batch-fetch their display names.
-        val otherIds = friendships
-            .map { if (it.requesterId == currentUserId) it.recipientId else it.requesterId }
-            .distinct()
-
-        // Build an IN filter using the PostgREST format: (id1,id2,id3)
-        val idList = otherIds.joinToString(",")
-        val users = postgrest.from("users")
-            .select {
-                filter {
-                    filter(FilterOperation("id", FilterOperator.IN, "($idList)"))
-                }
-            }
-            .decodeList<SupabaseUser>()
-
-        val displayNameById = users.associate { it.id to it.displayName }
-        Log.d(TAG, "FriendshipRemoteSource.fetchAllFriendships ← ${users.size} user display names loaded")
-
-        return Pair(friendships, displayNameById)
+            Pair(friendships, displayNameById)
+        } catch (e: Exception) {
+            Log.e(TAG, "FriendshipRemoteSource.fetchAllFriendships ✗ ${e::class.simpleName}: ${e.message}", e)
+            throw e
+        }
     }
 
     /**
@@ -103,89 +110,137 @@ class FriendshipRemoteSource @Inject constructor(
         val currentUserId = auth.currentUserOrNull()?.id
             ?: throw IllegalStateException("No active session")
 
-        Log.d(TAG, "FriendshipRemoteSource.searchFriends → query=\"$query\"")
+        Log.d(TAG, "FriendshipRemoteSource.searchFriends → query=\"$query\", currentUserId=$currentUserId")
 
-        // 1. Get all accepted friendship rows.
-        val friendships = postgrest.from("friendships")
-            .select {
-                filter {
-                    or {
-                        filter(FilterOperation("requester_id", FilterOperator.EQ, currentUserId))
-                        filter(FilterOperation("recipient_id", FilterOperator.EQ, currentUserId))
+        return try {
+            // 1. Get all accepted friendship rows.
+            val friendships = postgrest.from("friendships")
+                .select {
+                    filter {
+                        or {
+                            filter(FilterOperation("requester_id", FilterOperator.EQ, currentUserId))
+                            filter(FilterOperation("recipient_id", FilterOperator.EQ, currentUserId))
+                        }
+                        eq("status", "accepted")
                     }
-                    eq("status", "accepted")
                 }
-            }
-            .decodeList<SupabaseFriendship>()
+                .decodeList<SupabaseFriendship>()
 
-        if (friendships.isEmpty()) {
-            Log.d(TAG, "FriendshipRemoteSource.searchFriends ← 0 friends")
-            return emptyList()
+            Log.d(TAG, "FriendshipRemoteSource.searchFriends ← ${friendships.size} accepted friendships")
+
+            if (friendships.isEmpty()) return emptyList()
+
+            val friendIds = friendships.map {
+                if (it.requesterId == currentUserId) it.recipientId else it.requesterId
+            }.distinct()
+
+            // 2. Filter those users by display_name ILIKE %query%.
+            val results = postgrest.from("users")
+                .select {
+                    filter {
+                        isIn("id", friendIds)
+                        ilike("display_name", "%$query%")
+                    }
+                    order("display_name", Order.ASCENDING)
+                    limit(20)
+                }
+                .decodeList<SupabaseUser>()
+
+            Log.d(TAG, "FriendshipRemoteSource.searchFriends ← ${results.size} results for \"$query\"")
+            results
+        } catch (e: Exception) {
+            Log.e(TAG, "FriendshipRemoteSource.searchFriends ✗ ${e::class.simpleName}: ${e.message}", e)
+            throw e
         }
-
-        val friendIds = friendships.map {
-            if (it.requesterId == currentUserId) it.recipientId else it.requesterId
-        }.distinct()
-
-        // 2. Filter those users by display_name ILIKE %query%.
-        val idList = friendIds.joinToString(",")
-        val results = postgrest.from("users")
-            .select {
-                filter {
-                    filter(FilterOperation("id", FilterOperator.IN, "($idList)"))
-                    ilike("display_name", "%$query%")
-                }
-                order("display_name", Order.ASCENDING)
-                limit(20)
-            }
-            .decodeList<SupabaseUser>()
-
-        Log.d(TAG, "FriendshipRemoteSource.searchFriends ← ${results.size} results for \"$query\"")
-        return results
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
 
-    /** Inserts a new `"pending"` friendship row from the current user to [recipientId]. */
+    /**
+     * Inserts a new `"pending"` friendship row from the current user to [recipientId].
+     *
+     * Uses a typed [FriendshipInsert] DTO so the Supabase SDK serializes the
+     * payload correctly rather than relying on a raw map.
+     */
     suspend fun sendFriendRequest(recipientId: String) {
         val currentUserId = auth.currentUserOrNull()?.id
             ?: throw IllegalStateException("No active session")
-        Log.d(TAG, "FriendshipRemoteSource.sendFriendRequest → to=$recipientId")
-        postgrest.from("friendships").insert(
-            mapOf(
-                "requester_id" to currentUserId,
-                "recipient_id" to recipientId,
-                "status"       to "pending"
+
+        Log.d(TAG, "FriendshipRemoteSource.sendFriendRequest → requesterId=$currentUserId, recipientId=$recipientId")
+
+        try {
+            postgrest.from("friendships").insert(
+                FriendshipInsert(
+                    requesterId = currentUserId,
+                    recipientId = recipientId
+                )
             )
-        )
+            Log.d(TAG, "FriendshipRemoteSource.sendFriendRequest ← insert succeeded")
+        } catch (e: Exception) {
+            Log.e(TAG, "FriendshipRemoteSource.sendFriendRequest ✗ ${e::class.simpleName}: ${e.message}", e)
+            throw e
+        }
     }
 
     /** Updates the friendship row [friendshipId] to `"accepted"`. */
     suspend fun acceptFriendRequest(friendshipId: String) {
         Log.d(TAG, "FriendshipRemoteSource.acceptFriendRequest → id=$friendshipId")
-        postgrest.from("friendships")
-            .update({ set("status", "accepted") }) {
-                filter { eq("id", friendshipId) }
-            }
+        try {
+            postgrest.from("friendships")
+                .update({ set("status", "accepted") }) {
+                    filter { eq("id", friendshipId) }
+                }
+            Log.d(TAG, "FriendshipRemoteSource.acceptFriendRequest ← succeeded")
+        } catch (e: Exception) {
+            Log.e(TAG, "FriendshipRemoteSource.acceptFriendRequest ✗ ${e::class.simpleName}: ${e.message}", e)
+            throw e
+        }
     }
 
     /** Updates the friendship row [friendshipId] to `"rejected"`. */
     suspend fun rejectFriendRequest(friendshipId: String) {
         Log.d(TAG, "FriendshipRemoteSource.rejectFriendRequest → id=$friendshipId")
-        postgrest.from("friendships")
-            .update({ set("status", "rejected") }) {
-                filter { eq("id", friendshipId) }
-            }
+        try {
+            postgrest.from("friendships")
+                .update({ set("status", "rejected") }) {
+                    filter { eq("id", friendshipId) }
+                }
+            Log.d(TAG, "FriendshipRemoteSource.rejectFriendRequest ← succeeded")
+        } catch (e: Exception) {
+            Log.e(TAG, "FriendshipRemoteSource.rejectFriendRequest ✗ ${e::class.simpleName}: ${e.message}", e)
+            throw e
+        }
     }
 
     /** Deletes the friendship row [friendshipId] (unfriend or withdraw request). */
     suspend fun removeFriendship(friendshipId: String) {
         Log.d(TAG, "FriendshipRemoteSource.removeFriendship → id=$friendshipId")
-        postgrest.from("friendships").delete {
-            filter { eq("id", friendshipId) }
+        try {
+            postgrest.from("friendships").delete {
+                filter { eq("id", friendshipId) }
+            }
+            Log.d(TAG, "FriendshipRemoteSource.removeFriendship ← succeeded")
+        } catch (e: Exception) {
+            Log.e(TAG, "FriendshipRemoteSource.removeFriendship ✗ ${e::class.simpleName}: ${e.message}", e)
+            throw e
         }
     }
 
     /** Returns the current user's Supabase Auth UUID, or `null` if unauthenticated. */
     fun currentUserId(): String? = auth.currentUserOrNull()?.id
+
+    // ── Insert DTO ────────────────────────────────────────────────────────────
+
+    /**
+     * Minimal insert payload for the `friendships` table.
+     *
+     * Excludes `id`, `created_at`, and `updated_at` — all generated server-side.
+     * Status defaults to `"pending"` at the database level.
+     */
+    @Serializable
+    private data class FriendshipInsert(
+        @SerialName("requester_id") val requesterId: String,
+        @SerialName("recipient_id") val recipientId: String,
+        @SerialName("status")       val status: String = "pending"
+    )
 }
