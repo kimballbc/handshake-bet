@@ -2,9 +2,9 @@ package com.bck.handshakebet.feature.newbet.ui
 
 import app.cash.turbine.test
 import com.bck.handshakebet.core.testing.MainDispatcherRule
+import com.bck.handshakebet.feature.friends.domain.repository.FriendshipRepository
 import com.bck.handshakebet.feature.home.domain.model.UserSummary
 import com.bck.handshakebet.feature.home.domain.repository.BetRepository
-import com.bck.handshakebet.feature.home.domain.repository.UserRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -26,9 +26,9 @@ class NewBetViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
 
     private val betRepository: BetRepository = mockk()
-    private val userRepository: UserRepository = mockk()
+    private val friendshipRepository: FriendshipRepository = mockk()
 
-    private fun viewModel() = NewBetViewModel(betRepository, userRepository)
+    private fun viewModel() = NewBetViewModel(betRepository, friendshipRepository)
 
     // ── Initial state ─────────────────────────────────────────────────────────
 
@@ -145,7 +145,7 @@ class NewBetViewModelTest {
     @Test
     fun `search fires after 400ms debounce for queries of 2+ chars`() = runTest {
         val users = listOf(UserSummary("u1", "Alex"))
-        coEvery { userRepository.searchUsers("Al") } returns Result.success(users)
+        coEvery { friendshipRepository.searchFriends("Al") } returns Result.success(users)
 
         val vm = viewModel()
         // With StandardTestDispatcher the collector coroutine is queued, not started.
@@ -173,7 +173,7 @@ class NewBetViewModelTest {
     @Test
     fun `search results are cleared when query drops below 2 chars`() = runTest {
         val users = listOf(UserSummary("u1", "Alex"))
-        coEvery { userRepository.searchUsers("Al") } returns Result.success(users)
+        coEvery { friendshipRepository.searchFriends("Al") } returns Result.success(users)
 
         val vm = viewModel()
         runCurrent() // start the collector coroutines before pushing a query

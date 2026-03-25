@@ -49,6 +49,10 @@ sealed interface Screen {
     @Serializable
     data object Profile : Screen
 
+    /** Friends list, incoming/sent requests, and the Add Friend dialog. */
+    @Serializable
+    data object Friends : Screen
+
     /**
      * Bet detail screen for viewing or acting on a single bet.
      *

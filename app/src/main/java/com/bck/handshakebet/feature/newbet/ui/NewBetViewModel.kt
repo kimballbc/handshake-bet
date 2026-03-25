@@ -2,9 +2,9 @@ package com.bck.handshakebet.feature.newbet.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bck.handshakebet.feature.friends.domain.repository.FriendshipRepository
 import com.bck.handshakebet.feature.home.domain.model.UserSummary
 import com.bck.handshakebet.feature.home.domain.repository.BetRepository
-import com.bck.handshakebet.feature.home.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,13 +26,15 @@ import javax.inject.Inject
  * and bet submission. On success [NewBetUiState.isSuccess] is set to `true` so
  * the screen can navigate back to the Account screen.
  *
- * @property betRepository  Used to create the bet once the form is submitted.
- * @property userRepository Used for opponent search queries.
+ * Opponent search is scoped to accepted friends only via [FriendshipRepository.searchFriends].
+ *
+ * @property betRepository        Used to create the bet once the form is submitted.
+ * @property friendshipRepository Used to search accepted friends for the opponent picker.
  */
 @HiltViewModel
 class NewBetViewModel @Inject constructor(
     private val betRepository: BetRepository,
-    private val userRepository: UserRepository
+    private val friendshipRepository: FriendshipRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NewBetUiState())
@@ -156,7 +158,7 @@ class NewBetViewModel @Inject constructor(
                 .filter { it.length >= 2 }    // Don't search on very short strings
                 .collectLatest { query ->
                     _uiState.update { it.copy(isSearching = true) }
-                    userRepository.searchUsers(query)
+                    friendshipRepository.searchFriends(query)
                         .onSuccess { results ->
                             _uiState.update { it.copy(searchResults = results, isSearching = false) }
                         }

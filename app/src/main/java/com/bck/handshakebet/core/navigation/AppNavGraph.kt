@@ -16,8 +16,10 @@ import androidx.navigation.toRoute
 import com.bck.handshakebet.core.ui.components.BottomNavBar
 import com.bck.handshakebet.feature.account.ui.AccountScreen
 import com.bck.handshakebet.feature.auth.ui.LoginScreen
+import com.bck.handshakebet.feature.friends.ui.FriendsScreen
 import com.bck.handshakebet.feature.home.ui.HomeScreen
 import com.bck.handshakebet.feature.newbet.ui.NewBetScreen
+import com.bck.handshakebet.feature.profile.ui.ProfileScreen
 
 /**
  * Top-level navigation graph for the HandshakeBet app.
@@ -137,10 +139,6 @@ fun AppNavGraph(
                 Text(text = "Bet Detail: ${destination.betId}")
             }
 
-            // ── Phase 5: Friends ──────────────────────────────────────────────────
-            // Friends surface is embedded within Home and Account screens;
-            // no top-level destination needed.
-
             // ── Phase 5: Records + Stats ──────────────────────────────────────────
             composable<Screen.Records> {
                 // TODO(Phase 5): Replace with RecordsScreen
@@ -152,10 +150,26 @@ fun AppNavGraph(
                 Text(text = "Stats — Phase 5")
             }
 
-            // ── Phase 6: Profile ──────────────────────────────────────────────────
+            // ── Phase 5: Profile + Friends ────────────────────────────────────────
             composable<Screen.Profile> {
-                // TODO(Phase 6): Replace with ProfileScreen
-                Text(text = "Profile — Phase 6")
+                ProfileScreen(
+                    onNavigateToFriends = {
+                        navController.navigate(Screen.Friends) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onSignedOut = {
+                        navController.navigate(Screen.Login) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable<Screen.Friends> {
+                FriendsScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
             }
         }
     }
