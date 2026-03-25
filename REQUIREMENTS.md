@@ -172,27 +172,44 @@ A rebuild of Handshake with intentional architecture, test coverage, and documen
 
 ## Phase 5 — Friends
 
-> Friend requests, acceptance/rejection, and friends list.
+> Friend requests, acceptance/rejection, friends list, and Profile stub with Sign Out.
+
+### Supabase
+- [x] `friendships` table — `id`, `requester_id`, `recipient_id`, `status` (`pending`/`accepted`/`rejected`), `created_at`, `updated_at`
+- [x] 4 RLS policies: SELECT (both parties), INSERT (requester), UPDATE (recipient), DELETE (both parties)
 
 ### Data Layer
-- [ ] `SupabaseFriendship` DTO
-- [ ] `FriendshipRemoteSource`
-- [ ] `FriendshipRepositoryImpl`
+- [x] `SupabaseFriendship` DTO (`feature/friends/data/remote/`)
+- [x] `FriendshipRemoteSource` — fetchAllFriendships (with display-name join), searchFriends, send/accept/reject/remove
+- [x] `FriendshipRepositoryImpl` — partitions rows into friends / incoming / sent; error mapping
+- [x] `FriendshipModule` — Hilt `@Binds` wiring
 
 ### Domain Layer
-- [ ] `Friendship` domain model
-- [ ] `FriendshipRepository` interface
+- [x] `Friend` domain model — `friendshipId`, `userId`, `displayName`
+- [x] `FriendRequest` domain model — `friendshipId`, `otherUserId`, `otherUserDisplayName`, `isIncoming`
+- [x] `FriendshipsData` — aggregates all friendship data in one pass
+- [x] `FriendshipRepository` interface — loadFriendships, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship, searchFriends
 
 ### UI Layer
-- [ ] `FriendsUiState`, `FriendsViewModel`
-- [ ] `FriendsScreen`, `FriendCard`, `FriendRequestCard`, `AddFriendDialog`
+- [x] `FriendsUiState`, `FriendsViewModel` (`feature/friends/ui/`)
+- [x] `FriendsScreen` — three sections: incoming requests, accepted friends, sent requests; FAB opens Add Friend dialog
+- [x] `FriendCard` — accepted friend with remove button
+- [x] `FriendRequestCard` — incoming (accept + reject) or sent (withdraw)
+- [x] `AddFriendDialog` — debounced search across all users, tap to send request
+- [x] `ProfileScreen` + `ProfileViewModel` (`feature/profile/ui/`) — display name, Friends nav button, Sign Out
+- [x] `Screen.Friends` added to navigation graph
+- [x] `AppNavGraph` updated — `ProfileScreen` and `FriendsScreen` wired; sign-out pops to Login
+
+### NewBet integration
+- [x] `NewBetViewModel` now injects `FriendshipRepository` and calls `searchFriends` — opponent search scoped to accepted friends only
 
 ### Tests
-- [ ] `FriendsViewModelTest` — send request, accept, reject, list loading
+- [x] `FriendsViewModelTest` — 17 tests: init load, data partitioning, error state, dialog open/dismiss, send/accept/reject/remove success+failure, concurrency guard, error dismissal, debounced search
+- [x] `NewBetViewModelTest` updated — mocks `friendshipRepository.searchFriends` instead of `userRepository.searchUsers`
 
 ### Documentation
-- [ ] KDoc on all public classes
-- [ ] `REQUIREMENTS.md` updated
+- [x] KDoc on all public classes, functions, and properties
+- [x] `REQUIREMENTS.md` updated
 
 ---
 
