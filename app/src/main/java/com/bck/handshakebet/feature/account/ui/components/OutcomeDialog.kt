@@ -85,6 +85,17 @@ fun OutcomeDialog(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                // Draw option
+                OutlinedButton(
+                    onClick = { onWinnerSelected("draw") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "It's a Draw",
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         },
         confirmButton = {},

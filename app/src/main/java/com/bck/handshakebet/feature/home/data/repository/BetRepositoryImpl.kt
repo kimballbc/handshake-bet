@@ -3,12 +3,11 @@ package com.bck.handshakebet.feature.home.data.repository
 import android.util.Log
 import com.bck.handshakebet.feature.home.data.remote.BetRemoteSource
 import com.bck.handshakebet.feature.home.data.remote.SupabaseBet
+import com.bck.handshakebet.feature.home.data.remote.UserRemoteSource
 import com.bck.handshakebet.feature.home.domain.model.Bet
 import com.bck.handshakebet.feature.home.domain.model.BetStatus
 import com.bck.handshakebet.feature.home.domain.repository.BetRepository
 import io.github.jan.supabase.auth.Auth
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import javax.inject.Inject
 
 private const val TAG = "BCK"
@@ -20,15 +19,17 @@ private const val TAG = "BCK"
  * [Bet] domain models, and translates exceptions into user-friendly error
  * messages wrapped in [Result.failure].
  *
- * [auth] is injected here (rather than through [BetRemoteSource]) so that
- * [createBet] can read the current user's display name from Auth metadata
- * without adding a round-trip to the `users` table.
+ * [auth] is injected to resolve the current user's ID. The display name is
+ * always fetched from [UserRemoteSource] (`public.users`) to guarantee the
+ * creator name on a new bet matches the rest of the app.
  *
- * @property remoteSource The Supabase data source for raw bet data.
- * @property auth         Supabase Auth client for current-user metadata.
+ * @property remoteSource     The Supabase data source for raw bet data.
+ * @property userRemoteSource Used to fetch the creator's canonical display name.
+ * @property auth             Supabase Auth client for the current user's ID.
  */
 class BetRepositoryImpl @Inject constructor(
     private val remoteSource: BetRemoteSource,
+    private val userRemoteSource: UserRemoteSource,
     private val auth: Auth
 ) : BetRepository {
 
@@ -68,11 +69,8 @@ class BetRepositoryImpl @Inject constructor(
         return runCatching {
         val currentUser = auth.currentUserOrNull()
             ?: error("Cannot create a bet — no active session.")
-        val creatorDisplayName = currentUser.userMetadata
-            ?.get("display_name")
-            ?.jsonPrimitive
-            ?.contentOrNull
-            ?.removeSurrounding("\"")
+        // Fetch from public.users — single source of truth for display names.
+        val creatorDisplayName = userRemoteSource.fetchDisplayName(currentUser.id)
             ?: currentUser.email
             ?: currentUser.id
         Log.d(TAG, "BetRepositoryImpl.createBet  creatorId=${currentUser.id}, creatorDisplayName=\"$creatorDisplayName\"")

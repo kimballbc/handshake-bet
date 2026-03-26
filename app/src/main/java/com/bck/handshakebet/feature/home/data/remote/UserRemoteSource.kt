@@ -3,8 +3,6 @@ package com.bck.handshakebet.feature.home.data.remote
 import android.util.Log
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import javax.inject.Inject
 
 private const val TAG = "BCK"
@@ -59,21 +57,25 @@ class UserRemoteSource @Inject constructor(
     }
 
     /**
-     * Returns the display name stored in Supabase Auth metadata for the
-     * currently signed-in user, or `null` if there is no active session.
+     * Fetches the `display_name` for [userId] from `public.users` — the single
+     * source of truth for display names across the app.
      *
-     * This avoids a round-trip to `public.users` when we only need the
-     * creator's display name for a new bet.
+     * Returns `null` if no row is found or there is no active session.
      */
-    fun currentUserDisplayName(): String? {
-        val name = auth.currentUserOrNull()
-            ?.userMetadata
-            ?.get("display_name")
-            ?.jsonPrimitive
-            ?.contentOrNull
-            ?.removeSurrounding("\"")
-        Log.d(TAG, "UserRemoteSource.currentUserDisplayName → \"$name\"")
-        return name
+    suspend fun fetchDisplayName(userId: String): String? {
+        Log.d(TAG, "UserRemoteSource.fetchDisplayName → userId=$userId")
+        return try {
+            val result = postgrest.from("users")
+                .select { filter { eq("id", userId) } }
+                .decodeList<SupabaseUser>()
+                .firstOrNull()
+                ?.displayName
+            Log.d(TAG, "UserRemoteSource.fetchDisplayName ← \"$result\"")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "UserRemoteSource.fetchDisplayName ✗ ${e::class.simpleName}: ${e.message}", e)
+            null
+        }
     }
 
     /** Returns the current user's Supabase Auth UUID, or `null` if unauthenticated. */

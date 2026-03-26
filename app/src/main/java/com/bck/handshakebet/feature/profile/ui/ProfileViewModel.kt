@@ -3,6 +3,7 @@ package com.bck.handshakebet.feature.profile.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bck.handshakebet.feature.auth.domain.repository.AuthRepository
+import com.bck.handshakebet.feature.home.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,17 +32,28 @@ data class ProfileUiState(
  * sign-out, navigating back to Login on success via [onSignedOut].
  *
  * @property authRepository Auth domain contract.
+ * @property userRepository Fetches the canonical display name from `public.users`.
  */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
-        _uiState.update { it.copy(displayName = authRepository.getCurrentUser()?.displayName) }
+        viewModelScope.launch {
+            userRepository.getCurrentUserSummary()
+                .onSuccess { summary ->
+                    _uiState.update { it.copy(displayName = summary?.displayName) }
+                }
+                // On failure, fall back to auth metadata so the screen still shows something
+                .onFailure {
+                    _uiState.update { it.copy(displayName = authRepository.getCurrentUser()?.displayName) }
+                }
+        }
     }
 
     /**

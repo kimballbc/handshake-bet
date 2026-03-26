@@ -18,6 +18,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,6 +69,9 @@ fun BetActionCard(
     modifier: Modifier = Modifier
 ) {
     var showOutcomeDialog by remember { mutableStateOf(false) }
+    // Incremented whenever the dialog is dismissed without a selection, which
+    // forces the HandshakeSlider to recompose with fresh state (confirmed = false).
+    var sliderKey by remember { mutableIntStateOf(0) }
     val isCreator  = bet.creatorId  == currentUserId
     val isOpponent = bet.opponentId == currentUserId
 
@@ -77,7 +82,10 @@ fun BetActionCard(
                 showOutcomeDialog = false
                 onComplete(winnerId)
             },
-            onDismiss = { showOutcomeDialog = false }
+            onDismiss = {
+                showOutcomeDialog = false
+                sliderKey++   // reset the slider back to the left
+            }
         )
     }
 
@@ -142,10 +150,12 @@ fun BetActionCard(
             // ── Outcome badge (history only) ──────────────────────────────────
             if (bet.status == BetStatus.COMPLETED && bet.winnerId != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                val winnerName = when (bet.winnerId) {
-                    bet.creatorId  -> bet.creatorDisplayName
-                    bet.opponentId -> bet.opponentDisplayName ?: "Opponent"
-                    else           -> "Unknown"
+                val isDraw = bet.winnerId == "draw"
+                val winnerName = when {
+                    isDraw             -> null
+                    bet.winnerId == bet.creatorId  -> bet.creatorDisplayName
+                    bet.winnerId == bet.opponentId -> bet.opponentDisplayName ?: "Opponent"
+                    else               -> null
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -157,7 +167,7 @@ fun BetActionCard(
                         tint = MaterialTheme.colorScheme.tertiary
                     )
                     Text(
-                        text = "$winnerName won",
+                        text = if (isDraw) "Draw" else "${winnerName ?: "Unknown"} won",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.tertiary
                     )
@@ -213,11 +223,13 @@ fun BetActionCard(
                 }
                 bet.status == BetStatus.ACTIVE -> {
                     Spacer(modifier = Modifier.height(12.dp))
-                    HandshakeSlider(
-                        label = "Slide to complete",
-                        onConfirmed = { showOutcomeDialog = true },
-                        enabled = isActionEnabled
-                    )
+                    key(sliderKey) {
+                        HandshakeSlider(
+                            label = "Slide to complete",
+                            onConfirmed = { showOutcomeDialog = true },
+                            enabled = isActionEnabled
+                        )
+                    }
                 }
                 else -> { /* History — no actions */ }
             }

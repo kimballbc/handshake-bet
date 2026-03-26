@@ -22,9 +22,10 @@ interface UserRepository {
     suspend fun searchUsers(query: String): Result<List<UserSummary>>
 
     /**
-     * Returns a [UserSummary] for the currently signed-in user, or `null`
-     * if no session is active. Used to populate [creator_display_name] when
-     * creating a bet without a separate network call.
+     * Returns a [UserSummary] for the currently signed-in user by fetching
+     * their display name from `public.users` — the single source of truth.
+     *
+     * Returns `null` inside [Result.success] when no session is active.
      */
-    fun getCurrentUserSummary(): UserSummary?
+    suspend fun getCurrentUserSummary(): Result<UserSummary?>
 }

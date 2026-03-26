@@ -20,6 +20,7 @@ import com.bck.handshakebet.feature.friends.ui.FriendsScreen
 import com.bck.handshakebet.feature.home.ui.HomeScreen
 import com.bck.handshakebet.feature.newbet.ui.NewBetScreen
 import com.bck.handshakebet.feature.profile.ui.ProfileScreen
+import com.bck.handshakebet.feature.records.ui.RecordsScreen
 
 /**
  * Top-level navigation graph for the HandshakeBet app.
@@ -45,7 +46,7 @@ fun AppNavGraph(
 
     // BottomNavBar is only visible on main feature screens (not Login).
     val showBottomBar = currentDestination?.let { dest ->
-        listOf(Screen.Home, Screen.Account, Screen.Records, Screen.Stats, Screen.Profile)
+        listOf(Screen.Home, Screen.Account, Screen.Records, Screen.Profile)
             .any { dest.hasRoute(it::class) }
     } ?: false
 
@@ -54,7 +55,6 @@ fun AppNavGraph(
         currentDestination?.hasRoute(Screen.Home::class) == true    -> Screen.Home
         currentDestination?.hasRoute(Screen.Account::class) == true -> Screen.Account
         currentDestination?.hasRoute(Screen.Records::class) == true -> Screen.Records
-        currentDestination?.hasRoute(Screen.Stats::class) == true   -> Screen.Stats
         currentDestination?.hasRoute(Screen.Profile::class) == true -> Screen.Profile
         else -> Screen.Home
     }
@@ -139,15 +139,9 @@ fun AppNavGraph(
                 Text(text = "Bet Detail: ${destination.betId}")
             }
 
-            // ── Phase 5: Records + Stats ──────────────────────────────────────────
+            // ── Phase 7: Records ──────────────────────────────────────────────────
             composable<Screen.Records> {
-                // TODO(Phase 5): Replace with RecordsScreen
-                Text(text = "Records — Phase 5")
-            }
-
-            composable<Screen.Stats> {
-                // TODO(Phase 5): Replace with StatsScreen
-                Text(text = "Stats — Phase 5")
+                RecordsScreen()
             }
 
             // ── Phase 5: Profile + Friends ────────────────────────────────────────

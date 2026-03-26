@@ -24,10 +24,12 @@ class UserRepositoryImpl @Inject constructor(
         throw Exception(toFriendlyMessage(cause), cause)
     }
 
-    override fun getCurrentUserSummary(): UserSummary? {
-        val id = remoteSource.currentUserId() ?: return null
-        val displayName = remoteSource.currentUserDisplayName() ?: return null
-        return UserSummary(id = id, displayName = displayName)
+    override suspend fun getCurrentUserSummary(): Result<UserSummary?> = runCatching {
+        val id = remoteSource.currentUserId() ?: return@runCatching null
+        val displayName = remoteSource.fetchDisplayName(id) ?: return@runCatching null
+        UserSummary(id = id, displayName = displayName)
+    }.recoverCatching { cause ->
+        throw Exception(toFriendlyMessage(cause), cause)
     }
 
     // ── Error handling ────────────────────────────────────────────────────────
